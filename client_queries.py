@@ -3,7 +3,6 @@ import psycopg2 as p
 CREATE_TABLES = [
 
     '''
-
     CREATE TABLE IF NOT EXISTS public.schmucks
     (
         shipper_id uuid NOT NULL,
@@ -21,7 +20,7 @@ CREATE_TABLES = [
         OWNER to postgres;''',
 
     '''
-
+    CREATE TYPE package_status AS ENUM ('label printed at', 'departed from', 'arrived at', 'out for delivery', 'delivered');
     CREATE TABLE IF NOT EXISTS public.schmackage_logs
     (
         tracking_number integer NOT NULL,
@@ -39,12 +38,16 @@ CREATE_TABLES = [
 
     '''
 
+    CREATE TYPE package_type AS ENUM ('flat envelope', 'small box', 'large box', 'crate', 'barrel', 'keg');
+    CREATE TYPE package_priority AS ENUM ('dandelion tuft', 'phony express', 'standard', 'priority', 'first class', 'ludicrous speed', 'ethically and morally unsound speed');
     CREATE TABLE IF NOT EXISTS public.schmackages
     (
         tracking_number integer NOT NULL,
         address character varying(128) COLLATE pg_catalog."default" NOT NULL,
         return_address character varying(128) COLLATE pg_catalog."default" NOT NULL,
         package_weight double precision NOT NULL,
+        ptype package_type NOT NULL;
+        priority package_priority NOT NULL;
         shipping_considerations character varying(256) COLLATE pg_catalog."default",
         price double precision NOT NULL,
         CONSTRAINT schmackages_pkey PRIMARY KEY (tracking_number)
