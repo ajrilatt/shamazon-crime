@@ -85,10 +85,24 @@ def gen_schmucks(num):
         cursor.execute(f"""INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer)
                        VALUES (gen_random_uuid(), '{address}', '{email}', '{phone}', '{payment_info}', {subscrimer});""")
 
-CREATE_TABLES = [
 
-    '''
-    CREATE TABLE IF NOT EXISTS public.schmucks
+RESET_DB = [
+    "DROP TABLE IF EXISTS public.schmucks;",
+    "DROP TABLE IF EXISTS public.schmackage_logs;",
+    "DROP TABLE IF EXISTS public.schmackages;"
+]
+
+#GENERATE_TEST_DATA = [
+#    """INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer) VALUES (
+#        gen_random_uuid(), '101 N College Ave, Annville, PA 17003', 'yarnall@lvc.edu', '7171008995', '1234567890ABCDEFG', FALSE
+#    );"""
+#]
+
+def reset_db(cursor):
+    cursor.execute("DROP TABLE IF EXISTS public.schmucks;")
+    cursor.execute("DROP TABLE IF EXISTS public.schmackage_logs;")
+    cursor.execute("DROP TABLE IF EXISTS public.schmackage;")
+    cursor.execute('''CREATE TABLE IF NOT EXISTS public.schmucks
     (
         shipper_id uuid NOT NULL,
         address character varying(128) COLLATE pg_catalog."default" NOT NULL,
@@ -102,9 +116,11 @@ CREATE_TABLES = [
     TABLESPACE pg_default;
 
     ALTER TABLE IF EXISTS public.schmucks
-        OWNER to postgres;''',
+        OWNER to postgres;''')
 
-    '''
+
+    cursor.execute('''
+    DROP TYPE package_status;
     CREATE TYPE package_status AS ENUM ('label printed at', 'departed from', 'arrived at', 'out for delivery', 'delivered');
     CREATE TABLE IF NOT EXISTS public.schmackage_logs
     (
@@ -119,10 +135,12 @@ CREATE_TABLES = [
     TABLESPACE pg_default;
 
     ALTER TABLE IF EXISTS public.schmackage_logs
-        OWNER to postgres;''',
+        OWNER to postgres;''')
 
-    '''
 
+    cursor.execute('''
+    DROP TYPE package_type;
+    DROP TYPE package_priority;
     CREATE TYPE package_type AS ENUM ('flat envelope', 'small box', 'large box', 'crate', 'barrel', 'keg');
     CREATE TYPE package_priority AS ENUM ('dandelion tuft', 'phony express', 'standard', 'priority', 'first class', 'ludicrous speed', 'ethically and morally unsound speed');
     CREATE TABLE IF NOT EXISTS public.schmackages
@@ -131,8 +149,8 @@ CREATE_TABLES = [
         address character varying(128) COLLATE pg_catalog."default" NOT NULL,
         return_address character varying(128) COLLATE pg_catalog."default" NOT NULL,
         package_weight double precision NOT NULL,
-        ptype package_type NOT NULL;
-        priority package_priority NOT NULL;
+        ptype package_type NOT NULL,
+        priority package_priority NOT NULL,
         shipping_considerations character varying(256) COLLATE pg_catalog."default",
         price double precision NOT NULL,
         CONSTRAINT schmackages_pkey PRIMARY KEY (tracking_number)
@@ -141,25 +159,9 @@ CREATE_TABLES = [
     TABLESPACE pg_default;
 
     ALTER TABLE IF EXISTS public.schmackages
-        OWNER to postgres;'''
-
-]
-
-RESET_DB = [
-    "DROP TABLE IF EXISTS public.schmucks;",
-    "DROP TABLE IF EXISTS public.schmackage_logs;",
-    "DROP TABLE IF EXISTS public.schmackages;"
-]
-
-GENERATE_TEST_DATA = [
-    """INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer) VALUES (
-        gen_random_uuid(), '101 N College Ave, Annville, PA 17003', 'yarnall@lvc.edu', '7171008995', '1234567890ABCDEFG', FALSE
-    );"""
-]
-
-def reset_db(cursor):
-    map(cursor.execute, RESET_DB)
-    map(cursor.execute, CREATE_TABLES)
+        OWNER to postgres;''')
+    #map(cursor.execute, RESET_DB)
+    #map(cursor.execute, CREATE_TABLES)
 
 
 
@@ -174,5 +176,6 @@ if __name__ == "__main__":
 
     reset_db(cursor)
     gen_schmucks(1000)
-    cursor.execute("SELECT * FROM schmucks")
+    cursor.execute("SELECT count(*) FROM schmucks")
+    conn.commit()
     print(cursor.fetchall())
