@@ -59,6 +59,12 @@ def most_frequent_customer():
                    GROUP BY shipper_id ORDER BY price LIMIT 1;"""
     return cursor.fetchone()
 
+#Finds the customer that spent the most money in the past year
+def most_spent_customer():
+    cursor.execute("""SELECT shipper_id FROM schmackages
+                   GROUP BY shipper_id ORDER BY SUM(price) LIMIT 1;"""
+    return cursor.fetchone()
+    
 #Forms connection and sets up cursor to access SHAMAZON
 conn = p.connect(database = 'shamazon',
                  host = 'localhost',
