@@ -95,8 +95,8 @@ def gen_schmackages_stuff(num=1000):
         package_priority = random.choice(['dandelion tuft', 'phony express', 'standard', 'priority', 'first class', 'ethically and morally unsound speed'])
         shipping_considerations = gen_string()
         price = gen_int()
-        cursor.execute(f"""INSERT INTO public.schmackages(tracking_number, address, return_address, package_type, package_priority, shipping_considerations, price)
-                       VALUES ({tracking_number}, '{address}', '{return_address}', {package_type}, {package_priority}, '{shipping_considerations}', {price});""")
+        cursor.execute(f"""INSERT INTO public.schmackages(tracking_number, address, package_weight, return_address, ptype, priority, shipping_considerations, price)
+                       VALUES ({tracking_number}, '{address}', 1.2, '{return_address}', '{package_type}', '{package_priority}', '{shipping_considerations}', {price});""")
 
         gen_schmackage_logs(tracking_number)
             
@@ -108,7 +108,7 @@ def gen_schmackage_logs(tracking_number):
         location = gen_string()
         truck = gen_int()
         cursor.execute(f"""INSERT INTO public.schmackage_logs(tracking_number, timestamp, package_status, location, truck)
-                       VALUES ('{tracking_number}', getdate(), {package_status}, '{location}', {truck});"""
+                       VALUES ('{tracking_number}', NULL, '{package_status}', '{location}', {truck});""")
 
 RESET_DB = [
     "DROP TABLE IF EXISTS public.schmucks;",
@@ -125,7 +125,7 @@ RESET_DB = [
 def reset_db(cursor):
     cursor.execute("DROP TABLE IF EXISTS public.schmucks;")
     cursor.execute("DROP TABLE IF EXISTS public.schmackage_logs;")
-    cursor.execute("DROP TABLE IF EXISTS public.schmackage;")
+    cursor.execute("DROP TABLE IF EXISTS public.schmackages;")
     cursor.execute('''CREATE TABLE IF NOT EXISTS public.schmucks
     (
         shipper_id uuid NOT NULL,
@@ -184,8 +184,6 @@ def reset_db(cursor):
 
     ALTER TABLE IF EXISTS public.schmackages
         OWNER to postgres;''')
-    #map(cursor.execute, RESET_DB)
-    #map(cursor.execute, CREATE_TABLES)
 
 
 
@@ -200,6 +198,9 @@ if __name__ == "__main__":
 
     reset_db(cursor)
     gen_schmucks(1000)
+    gen_schmackages_stuff(1000)
     cursor.execute("SELECT count(*) FROM schmucks")
+    cursor.execute("SELECT count(*) FROM schmackages")
+    cursor.execute("SELECT count(*) FROM schmackage_logs")
     conn.commit()
     print(cursor.fetchall())
