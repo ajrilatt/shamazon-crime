@@ -6,10 +6,11 @@ import string
 def gen_string(length=20):
     return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
 
-
 def gen_bool():
     return ''.join(random.choice(['FALSE', 'TRUE']))
 
+def gen_int():
+    return ''.join(str(random.choice(range(10))))
 
 # Generates the report in response to truck_number crashing
 def truck_crash_report(truck_number):
@@ -74,8 +75,7 @@ def bill_customers(bill_type='simple_bill'):
     return cursor.fetchall()
 
 
-# Generates random schmucks
-def gen_schmucks(num):
+def gen_schmucks(num=1000):
     for x in range(num):
         address = gen_string()
         email = gen_string()
@@ -85,6 +85,30 @@ def gen_schmucks(num):
         cursor.execute(f"""INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer)
                        VALUES (gen_random_uuid(), '{address}', '{email}', '{phone}', '{payment_info}', {subscrimer});""")
 
+# Generates random schmackages
+def gen_schmackages_stuff(num=1000):
+    for x in range(num):
+        tracking_number = gen_int()
+        address = gen_string()
+        return_address = gen_string()
+        package_type = random.choice(['flat envelope', 'small box', 'large box', 'crate', 'barrel', 'keg'])
+        package_priority = random.choice(['dandelion tuft', 'phony express', 'standard', 'priority', 'first class', 'ethically and morally unsound speed'])
+        shipping_considerations = gen_string()
+        price = gen_int()
+        cursor.execute(f"""INSERT INTO public.schmackages(tracking_number, address, return_address, package_type, package_priority, shipping_considerations, price)
+                       VALUES ({tracking_number}, '{address}', '{return_address}', {package_type}, {package_priority}, '{shipping_considerations}', {price});""")
+
+        gen_schmackage_logs(tracking_number)
+            
+            
+#Generates random schmackage logs
+def gen_schmackage_logs(tracking_number):
+    for x in range(random.randint(0,10)):
+        package_status = random.choice(['label printed at', 'departed from', 'arrived at', 'out for delivery', 'delivered'])
+        location = gen_string()
+        truck = gen_int()
+        cursor.execute(f"""INSERT INTO public.schmackage_logs(tracking_number, timestamp, package_status, location, truck)
+                       VALUES ('{tracking_number}', getdate(), {package_status}, '{location}', {truck});"""
 
 RESET_DB = [
     "DROP TABLE IF EXISTS public.schmucks;",
