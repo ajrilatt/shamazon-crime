@@ -67,8 +67,8 @@ RESET_DB = [
 ]
 
 GENERATE_TEST_DATA = [
-    """INSERT INTO public.shmucks VALUES (
-        gen_random_uuid(), "101 N College Ave, Annville, PA 17003", "yarnall@lvc.edu", "7171008995", "1234567890ABCDEFG", FALSE
+    """INSERT INTO public.schmucks VALUES (
+        gen_random_uuid(), '101 N College Ave, Annville, PA 17003', 'yarnall@lvc.edu', '7171008995', '1234567890ABCDEFG', FALSE
     );"""
 ]
 
@@ -85,6 +85,7 @@ if __name__ == "__main__":
                      port = '5432')
     cursor = conn.cursor()
 
-    #Returns all packages
-    cursor.execute("SELECT * FROM schmackages")
+    reset_db()
+    cursor.execute(GENERATE_TEST_DATA)    
+    cursor.execute("SELECT * FROM schmucks")
     print(cursor.fetchone())
