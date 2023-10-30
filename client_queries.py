@@ -126,7 +126,7 @@ def reset_db(cursor):
     (
         tracking_number integer NOT NULL,
         "timestamp" timestamp with time zone NOT NULL,
-        shipping_status character varying COLLATE pg_catalog."default",
+        package_status character varying COLLATE pg_catalog."default",
         location character varying COLLATE pg_catalog."default",
         truck integer,
         CONSTRAINT schmackage_logs_pkey PRIMARY KEY (tracking_number, "timestamp")
