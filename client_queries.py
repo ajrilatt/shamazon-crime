@@ -52,7 +52,12 @@ ALTER TABLE IF EXISTS public.schmackages
     OWNER to postgres;'''
 
 
-
+#Finds the best customer in the past year
+def most_frequent_customer():
+    cursor.execute("""SELECT shipper_id FROM schmackage_logs, schmackages
+                   WHERE schmackage_logs.tracking_number = schmackages.tracking_number
+                   GROUP BY shipper_id ORDER BY price LIMIT 1;"""
+    return cursor.fetchone()
 
 #Forms connection and sets up cursor to access SHAMAZON
 conn = p.connect(database = 'shamazon',
