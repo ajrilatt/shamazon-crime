@@ -1,57 +1,25 @@
 import psycopg2 as p
+import random
+import string
 
-BIG_ASS_STRING1 = '''-- DROP TABLE IF EXISTS public.schmucks;
+#Forms connection and sets up cursor to access SHAMAZON
+conn = p.connect(database = 'shamazon',
+                 host = 'localhost',
+                 user = input('Username: '),
+                 password = input('Password: '),
+                 port = '5432')
+cursor = conn.cursor()
 
-CREATE TABLE IF NOT EXISTS public.schmucks
-(
-    shipper_id uuid NOT NULL,
-    address character varying(128) COLLATE pg_catalog."default" NOT NULL,
-    email character varying(128) COLLATE pg_catalog."default",
-    phone character varying(10) COLLATE pg_catalog."default",
-    payment_info character varying(128) COLLATE pg_catalog."default" NOT NULL,
-    crime_subscrimer boolean NOT NULL,
-    CONSTRAINT schmucks_pkey PRIMARY KEY (shipper_id)
-)
+#Returns all packages
+cursor.execute("SELECT * FROM schmackages")
+print(cursor.fetchone())
 
-TABLESPACE pg_default;
+def gen_string(length = 20):
+    return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
 
-ALTER TABLE IF EXISTS public.schmucks
-    OWNER to postgres;'''
-BIG_ASS_STRING4 = '''-- DROP TABLE IF EXISTS public.schmucks;
-
-CREATE TABLE IF NOT EXISTS public.schmackage_logs
-(
-    tracking_number integer NOT NULL,
-    "timestamp" timestamp with time zone NOT NULL,
-    shipping_status character varying COLLATE pg_catalog."default",
-    location character varying COLLATE pg_catalog."default",
-    truck integer,
-    CONSTRAINT schmackage_logs_pkey PRIMARY KEY (tracking_number, "timestamp")
-)
-
-TABLESPACE pg_default;
-
-ALTER TABLE IF EXISTS public.schmackage_logs
-    OWNER to postgres;'''
-BIG_ASS_STRING3 = '''-- DROP TABLE IF EXISTS public.schmucks;
-
-CREATE TABLE IF NOT EXISTS public.schmackages
-(
-    tracking_number integer NOT NULL,
-    address character varying(128) COLLATE pg_catalog."default" NOT NULL,
-    return_address character varying(128) COLLATE pg_catalog."default" NOT NULL,
-    package_weight double precision NOT NULL,
-    shipping_considerations character varying(256) COLLATE pg_catalog."default",
-    price double precision NOT NULL,
-    CONSTRAINT schmackages_pkey PRIMARY KEY (tracking_number)
-)
-
-TABLESPACE pg_default;
-
-ALTER TABLE IF EXISTS public.schmackages
-    OWNER to postgres;'''
-
-
+def gen_bool():
+    return ''.join(random.choice(['FALSE', 'TRUE']) for i in range(length))
+    
 #Generates the report in response to truck_number crashing
 def truck_crash_report(truck_number):
     truck_report_data = {'shipper_data': [], 'recipient_data': [], 'last_delivery': []}
@@ -112,14 +80,13 @@ def bill_customers(bill_type = 'simple_bill'):
         return '''Error, invalid bill_type, please choose "simple_bill" or "itemized_bill"'''
     return cursor.fetchall()
 
-#Forms connection and sets up cursor to access SHAMAZON
-conn = p.connect(database = 'shamazon',
-                 host = 'localhost',
-                 user = input('Username: '),
-                 password = input('Password: '),
-                 port = '5432')
-cursor = conn.cursor()
-
-#Returns all packages
-cursor.execute("SELECT * FROM schmackages")
-print(cursor.fetchone())
+#Generates random schmucks
+def gen_schmucks(num):
+    for x in range(num):
+        address = gen_string()
+        email = gen_string()
+        phone = gen_string()
+        payment_info = gen_string()
+        subscrimer = gen_bool()
+        cursor.execute("""INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer)
+                       VALUES (gen_random_uuid(), '{address}', '{email}', '{phone}', '{payment_info}', {subscrimer})""")
