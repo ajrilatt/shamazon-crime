@@ -66,6 +66,12 @@ RESET_DB = [
     "DROP TABLE IF EXISTS public.schmackages;"
 ]
 
+GENERATE_TEST_DATA = [
+    """INSERT INTO public.shmucks VALUES (
+        gen_random_uuid(), "101 N College Ave, Annville, PA 17003", "yarnall@lvc.edu", "7171008995", "1234567890ABCDEFG", FALSE
+    );"""
+]
+
 def reset_db(cursor):
     map(cursor.execute, RESET_DB)
     map(cursor.execute, CREATE_TABLES)
