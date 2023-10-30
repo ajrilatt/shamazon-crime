@@ -64,7 +64,27 @@ def most_spent_customer():
     cursor.execute("""SELECT shipper_id FROM schmackages
                    GROUP BY shipper_id ORDER BY SUM(price) LIMIT 1;"""
     return cursor.fetchone()
+
+#Generates the report in response to truck_number crashing
+def truck_crash_report(truck_number):
+    truck_report_data = {'shipper_data': [], 'recipient_data': [], 'last_delivery': []}
     
+    #Find all customers who had a package lost in the crash
+    cursor.execute(f"""SELECT UNIQUE shipper_id FROM schmackage_logs
+                   WHERE truck = {truck_number}""")
+    truck_report_data['shipper_data'] = cursor.fetchall()
+    
+    #Find the recipients who had a package lost in the crash
+    cursor.execute(f"""SELECT UNIQUE address FROM schmackage_logs
+                   WHERE truck = {truck_number}""") 
+    truck_report_data['recipient_data'] = cursor.fetchall()
+    
+    #Find the last successful delivery by truck_number
+    cursor.execute(f"""SELECT location FROM schmackage_logs
+                   WHERE truck = {truck_number} GROUP BY max(timestamp) LIMIT 1""")
+    truck_report_data['last_delivery'] = cursor.fetchall()
+    return truck_report_data
+
 #Forms connection and sets up cursor to access SHAMAZON
 conn = p.connect(database = 'shamazon',
                  host = 'localhost',
