@@ -19,6 +19,16 @@ Implementation of a package-sending company's database for a Database class.
   -add_log() to add 1 schmackage_log
 
 
+## Client Queries (for the given queries in the project packet)
+  -truck_crash_report(truck_number)
+
+  -most_frequent_customer()
+
+  -most_spent_customer()
+
+  -bill_customers() *# Default generates simple bill, 'itemized_bill' generates itemized bill, 'type' organizes bills by payment type*
+
+
 
 ## Given Test Data Generation: (for complete data, call gen_schmucks() and gen_schmackages() which will fill all 3 tables)
   -gen_schmucks(number of schmucks)
