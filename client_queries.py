@@ -1,8 +1,8 @@
 import psycopg2 as p
 import random
 import string
-import time
 import datetime
+import uuid
 
 
 def gen_string(length=20):
@@ -51,9 +51,10 @@ def most_spent_customer():
     return cursor.fetchone()
 
 
-# Bills the customers for the past moneth of services
+# Bills the customers for the past month of services
 # 'simple_bill' => customer, address, and amount owed
-# 'itemized_bill' => bill listing each individual shipment and the chargest for it
+# 'itemized_bill' => bill listing each individual shipment and the charges for it
+# 'type' => simple bill sorted by payment type
 def bill_customers(bill_type='simple_bill'):
     # Creates simple bill
     if bill_type == 'simple_bill':
@@ -69,6 +70,7 @@ def bill_customers(bill_type='simple_bill'):
                        WHERE timestamp BETWEEN LOCALTIMESTAMP - INTERVAL '1 MONTH' AND LOCALTIMESTAMP
                        GROUP BY shipper_id, schmackages.tracking_number""")
 
+    # Gives bill by payment type
     elif bill_type == 'type':
         cursor.execute("""SELECT schmackages.shipper_id, return_address, SUM(price) FROM public.schmackages
                        JOIN public.schmackage_logs ON public.schmackages.tracking_number = public.schmackage_logs.tracking_number
@@ -77,10 +79,17 @@ def bill_customers(bill_type='simple_bill'):
                        GROUP BY crime_subscrimer, schmackages.shipper_id, return_address""")
     # Returns error message when invalid bill type is used
     else:
-        return '''Error, invalid bill_type, please choose "simple_bill" or "itemized_bill"'''
+        return '''Error, invalid bill_type, please choose "simple_bill", "itemized_bill", or "type"'''
     return cursor.fetchall()
 
 
+# Adds a single schmuck to the schmucks table
+def add_schmuck(shipper_id, address, email, phone, payment_info, subscrimer):
+    cursor.execute(f"""INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer)
+                           VALUES ('{shipper_id}', '{address}', '{email}', '{phone}', '{payment_info}', {subscrimer});""")
+
+
+# Generates random schmucks for testing
 def gen_schmucks(num=1000):
     for x in range(num):
         address = gen_string()
@@ -88,8 +97,16 @@ def gen_schmucks(num=1000):
         phone = gen_string(10)
         payment_info = gen_string()
         subscrimer = gen_bool()
-        cursor.execute(f"""INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer)
-                       VALUES (gen_random_uuid(), '{address}', '{email}', '{phone}', '{payment_info}', {subscrimer});""")
+        add_schmuck(uuid.uuid4(), address, email, phone, payment_info, subscrimer)
+        '''cursor.execute(f"""INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer)
+                       VALUES (gen_random_uuid(), '{address}', '{email}', '{phone}', '{payment_info}', {subscrimer});""")'''
+
+
+# Adds a schmackage to the schmackages table
+def add_schmackage(shipper_id, tracking_number, address, package_weight, return_address, package_type, package_priority, shipping_considerations, price):
+    cursor.execute(f"""INSERT INTO public.schmackages(shipper_id, tracking_number, address, package_weight, return_address, ptype, priority, shipping_considerations, price)
+                   VALUES ('{shipper_id}', {tracking_number}, '{address}', {package_weight}, '{return_address}', '{package_type}', '{package_priority}', '{shipping_considerations}', {price});""")
+
 
 # Generates random schmackages
 def gen_schmackages_stuff(num=1000):
@@ -101,12 +118,19 @@ def gen_schmackages_stuff(num=1000):
         package_priority = random.choice(['dandelion tuft', 'phony express', 'standard', 'priority', 'first class', 'ethically and morally unsound speed'])
         shipping_considerations = gen_string()
         price = gen_int()
-        cursor.execute(f"""INSERT INTO public.schmackages(shipper_id, tracking_number, address, package_weight, return_address, ptype, priority, shipping_considerations, price)
-                       VALUES (gen_random_uuid(), {tracking_number}, '{address}', 1.2, '{return_address}', '{package_type}', '{package_priority}', '{shipping_considerations}', {price});""")
+        add_schmackage(uuid.uuid4(), tracking_number, address, 1.2, return_address, package_type, package_priority,shipping_considerations, price)
+        '''cursor.execute(f"""INSERT INTO public.schmackages(shipper_id, tracking_number, address, package_weight, return_address, ptype, priority, shipping_considerations, price)
+                       VALUES (gen_random_uuid(), {tracking_number}, '{address}', 1.2, '{return_address}', '{package_type}', '{package_priority}', '{shipping_considerations}', {price});""")'''
 
         gen_schmackage_logs(tracking_number)
             
-            
+
+# Adds a schmackage log to the schmackage_logs table
+def add_log(tracking_number, timestamp, package_status, location, truck):
+    cursor.execute(f"""INSERT INTO public.schmackage_logs(tracking_number, timestamp, package_status, location, truck)
+                   VALUES ('{tracking_number}', '{timestamp}', '{package_status}', '{location}', {truck});""")
+
+
 #Generates random schmackage logs
 def gen_schmackage_logs(tracking_number):
     for x in range(random.randint(0,10)):
@@ -116,21 +140,12 @@ def gen_schmackage_logs(tracking_number):
         t = datetime.datetime.now()
         t2 = t + datetime.timedelta(seconds=x)
         ts = t2.strftime('%Y-%m-%d %H:%M:%S%z')
-        cursor.execute(f"""INSERT INTO public.schmackage_logs(tracking_number, timestamp, package_status, location, truck)
-                       VALUES ('{tracking_number}', '{ts}', '{package_status}', '{location}', {truck});""")
+        add_log(tracking_number, ts, package_status, location, truck)
+        '''cursor.execute(f"""INSERT INTO public.schmackage_logs(tracking_number, timestamp, package_status, location, truck)
+                       VALUES ('{tracking_number}', '{ts}', '{package_status}', '{location}', {truck});""")'''
 
-RESET_DB = [
-    "DROP TABLE IF EXISTS public.schmucks;",
-    "DROP TABLE IF EXISTS public.schmackage_logs;",
-    "DROP TABLE IF EXISTS public.schmackages;"
-]
 
-#GENERATE_TEST_DATA = [
-#    """INSERT INTO public.schmucks(shipper_id, address, email, phone, payment_info, crime_subscrimer) VALUES (
-#        gen_random_uuid(), '101 N College Ave, Annville, PA 17003', 'yarnall@lvc.edu', '7171008995', '1234567890ABCDEFG', FALSE
-#    );"""
-#]
-
+# Drops existing tables and remakes them as empty tables
 def reset_db(cursor):
     cursor.execute('''DROP TABLE IF EXISTS public.schmucks;''')
     cursor.execute('''DROP TABLE IF EXISTS public.schmackage_logs;
