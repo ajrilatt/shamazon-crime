@@ -1,6 +1,8 @@
 import psycopg2 as p
 import random
 import string
+import time
+import datetime
 
 
 def gen_string(length=20):
@@ -17,35 +19,34 @@ def truck_crash_report(truck_number):
     truck_report_data = {'shipper_data': [], 'recipient_data': [], 'last_delivery': []}
 
     # Find all customers who had a package lost in the crash
-    cursor.execute(f"""SELECT UNIQUE shipper_id FROM schmackage_logs
+    cursor.execute(f"""SELECT DISTINCT shipper_id, address FROM public.schmackage_logs JOIN public.schmackages ON schmackages.tracking_number=schmackage_logs.tracking_number
                    WHERE truck = {truck_number}""")
-    truck_report_data['shipper_data'] = cursor.fetchall()
-
-    # Find the recipients who had a package lost in the crash
-    cursor.execute(f"""SELECT UNIQUE address FROM schmackage_logs
-                   WHERE truck = {truck_number}""")
-    truck_report_data['recipient_data'] = cursor.fetchall()
+    for x in cursor.fetchall():
+        truck_report_data['shipper_data'] = x[0]
+        truck_report_data['recipient_data'] = x[1]
 
     # Find the last successful delivery by truck_number
     cursor.execute(f"""SELECT location FROM public.schmackage_logs
-                   WHERE truck = {truck_number} GROUP BY max(timestamp) LIMIT 1""")
+                   WHERE truck = {truck_number} ORDER BY timestamp DESC LIMIT 1""")
     truck_report_data['last_delivery'] = cursor.fetchall()
     return truck_report_data
 
 
 # Finds the best customer in the past year
 def most_frequent_customer():
-    cursor.execute("""SELECT shipper_id FROM public.schmackage_logs, public.schmackages
-                   WHERE public.schmackage_logs.tracking_number = public.schmackages.tracking_number AND
-                   DATEPART(yyyy, timestamp) = DATEPART(yyyy, DATEADD(m, -12, getdata()))
-                   GROUP BY shipper_id ORDER BY price LIMIT 1;""")
+    cursor.execute("""SELECT shipper_id FROM public.schmackage_logs JOIN public.schmackages
+                   ON schmackage_logs.tracking_number = schmackages.tracking_number
+                   WHERE timestamp BETWEEN LOCALTIMESTAMP - INTERVAL '1 YEAR' AND LOCALTIMESTAMP
+                   GROUP BY shipper_id
+                   ORDER BY COUNT(shipper_id) DESC LIMIT 1;""")
     return cursor.fetchone()
 
 
 # Finds the customer that spent the most money in the past year
 def most_spent_customer():
-    cursor.execute("""SELECT shipper_id FROM public.schmackages
-                   WHERE DATEPART(yyyy, timestamp) = DATEPART(yyyy, DATEADD(m, -12, getdata()))
+    cursor.execute("""SELECT shipper_id FROM public.schmackage_logs JOIN public.schmackages
+                   ON schmackage_logs.tracking_number = schmackages.tracking_number
+                   WHERE timestamp BETWEEN LOCALTIMESTAMP - INTERVAL '1 YEAR' AND LOCALTIMESTAMP
                    GROUP BY shipper_id ORDER BY SUM(price) LIMIT 1;""")
     return cursor.fetchone()
 
@@ -56,19 +57,24 @@ def most_spent_customer():
 def bill_customers(bill_type='simple_bill'):
     # Creates simple bill
     if bill_type == 'simple_bill':
-        cursor.execute("""SELECT shipper_id, return_address, SUM(price) FROM public.schmackages
-                       WHERE DATEPART(m, timestamp) = DATEPART(m, DATEADD(m, -1, getdate())) AND
-                       DATEPART(yyyy, timestamp) = DATEPART(yyyy, DATEADD(m, -1, getdate()))
-                       GROUP BY shipper_id""")
+        cursor.execute("""SELECT shipper_id, return_address, SUM(price) FROM public.schmackages JOIN public.schmackage_logs
+                       ON public.schmackages.tracking_number = public.schmackage_logs.tracking_number
+                       WHERE timestamp BETWEEN LOCALTIMESTAMP - INTERVAL '1 MONTH' AND LOCALTIMESTAMP
+                       GROUP BY shipper_id, return_address""")
 
     # Gives bill type by item
     elif bill_type == 'itemized_bill':
-        cursor.execute("""SELECT shipper_id, tracking_number, price FROM public.schmackages, public.schmackage_logs
-                       WHERE public.schmackages.tracking_number = public.schmackage_logs.tracking_number AND
-                       DATEPART(m, timestamp) = DATEPART(m, DATEADD(m, -1, getdate())) AND
-                       DATEPART(yyyy, timestamp) = DATEPART(yyyy, DATEADD(m, -1, getdate()))
-                       GROUP BY shipper_id""")
+        cursor.execute("""SELECT shipper_id, schmackages.tracking_number, price FROM public.schmackages JOIN public.schmackage_logs
+                       ON public.schmackages.tracking_number = public.schmackage_logs.tracking_number
+                       WHERE timestamp BETWEEN LOCALTIMESTAMP - INTERVAL '1 MONTH' AND LOCALTIMESTAMP
+                       GROUP BY shipper_id, schmackages.tracking_number""")
 
+    elif bill_type == 'type':
+        cursor.execute("""SELECT schmackages.shipper_id, return_address, SUM(price) FROM public.schmackages
+                       JOIN public.schmackage_logs ON public.schmackages.tracking_number = public.schmackage_logs.tracking_number
+                       JOIN public.schmucks ON schmucks.shipper_id = schmackages.shipper_id
+                       WHERE timestamp BETWEEN LOCALTIMESTAMP - INTERVAL '1 MONTH' AND LOCALTIMESTAMP
+                       GROUP BY crime_subscrimer, schmackages.shipper_id, return_address""")
     # Returns error message when invalid bill type is used
     else:
         return '''Error, invalid bill_type, please choose "simple_bill" or "itemized_bill"'''
@@ -88,15 +94,15 @@ def gen_schmucks(num=1000):
 # Generates random schmackages
 def gen_schmackages_stuff(num=1000):
     for x in range(num):
-        tracking_number = gen_int()
+        tracking_number = x
         address = gen_string()
         return_address = gen_string()
         package_type = random.choice(['flat envelope', 'small box', 'large box', 'crate', 'barrel', 'keg'])
         package_priority = random.choice(['dandelion tuft', 'phony express', 'standard', 'priority', 'first class', 'ethically and morally unsound speed'])
         shipping_considerations = gen_string()
         price = gen_int()
-        cursor.execute(f"""INSERT INTO public.schmackages(tracking_number, address, package_weight, return_address, ptype, priority, shipping_considerations, price)
-                       VALUES ({tracking_number}, '{address}', 1.2, '{return_address}', '{package_type}', '{package_priority}', '{shipping_considerations}', {price});""")
+        cursor.execute(f"""INSERT INTO public.schmackages(shipper_id, tracking_number, address, package_weight, return_address, ptype, priority, shipping_considerations, price)
+                       VALUES (gen_random_uuid(), {tracking_number}, '{address}', 1.2, '{return_address}', '{package_type}', '{package_priority}', '{shipping_considerations}', {price});""")
 
         gen_schmackage_logs(tracking_number)
             
@@ -106,9 +112,12 @@ def gen_schmackage_logs(tracking_number):
     for x in range(random.randint(0,10)):
         package_status = random.choice(['label printed at', 'departed from', 'arrived at', 'out for delivery', 'delivered'])
         location = gen_string()
-        truck = gen_int()
+        truck = x
+        t = datetime.datetime.now()
+        t2 = t + datetime.timedelta(seconds=x)
+        ts = t2.strftime('%Y-%m-%d %H:%M:%S%z')
         cursor.execute(f"""INSERT INTO public.schmackage_logs(tracking_number, timestamp, package_status, location, truck)
-                       VALUES ('{tracking_number}', NULL, '{package_status}', '{location}', {truck});""")
+                       VALUES ('{tracking_number}', '{ts}', '{package_status}', '{location}', {truck});""")
 
 RESET_DB = [
     "DROP TABLE IF EXISTS public.schmucks;",
@@ -123,9 +132,15 @@ RESET_DB = [
 #]
 
 def reset_db(cursor):
-    cursor.execute("DROP TABLE IF EXISTS public.schmucks;")
-    cursor.execute("DROP TABLE IF EXISTS public.schmackage_logs;")
-    cursor.execute("DROP TABLE IF EXISTS public.schmackages;")
+    cursor.execute('''DROP TABLE IF EXISTS public.schmucks;''')
+    cursor.execute('''DROP TABLE IF EXISTS public.schmackage_logs;
+                      DROP TYPE package_status;
+                      CREATE TYPE package_status AS ENUM ('label printed at', 'departed from', 'arrived at', 'out for delivery', 'delivered');''')
+    cursor.execute('''DROP TABLE IF EXISTS public.schmackages;
+                      DROP TYPE package_type;
+                      DROP TYPE package_priority;
+                      CREATE TYPE package_type AS ENUM ('flat envelope', 'small box', 'large box', 'crate', 'barrel', 'keg');
+                      CREATE TYPE package_priority AS ENUM ('dandelion tuft', 'phony express', 'standard', 'priority', 'first class', 'ludicrous speed', 'ethically and morally unsound speed');''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS public.schmucks
     (
         shipper_id uuid NOT NULL,
@@ -143,9 +158,8 @@ def reset_db(cursor):
         OWNER to postgres;''')
 
 
+
     cursor.execute('''
-    DROP TYPE package_status;
-    CREATE TYPE package_status AS ENUM ('label printed at', 'departed from', 'arrived at', 'out for delivery', 'delivered');
     CREATE TABLE IF NOT EXISTS public.schmackage_logs
     (
         tracking_number integer NOT NULL,
@@ -163,12 +177,9 @@ def reset_db(cursor):
 
 
     cursor.execute('''
-    DROP TYPE package_type;
-    DROP TYPE package_priority;
-    CREATE TYPE package_type AS ENUM ('flat envelope', 'small box', 'large box', 'crate', 'barrel', 'keg');
-    CREATE TYPE package_priority AS ENUM ('dandelion tuft', 'phony express', 'standard', 'priority', 'first class', 'ludicrous speed', 'ethically and morally unsound speed');
     CREATE TABLE IF NOT EXISTS public.schmackages
     (
+        shipper_id uuid NOT NULL,
         tracking_number integer NOT NULL,
         address character varying(128) COLLATE pg_catalog."default" NOT NULL,
         return_address character varying(128) COLLATE pg_catalog."default" NOT NULL,
@@ -191,8 +202,8 @@ if __name__ == "__main__":
     #Forms connection and sets up cursor to access SHAMAZON
     conn = p.connect(database = 'shamazon',
                      host = 'localhost',
-                     user = input('Username: '),
-                     password = input('Password: '),
+                     user = 'postgres',
+                     password = 'password',
                      port = '5432')
     cursor = conn.cursor()
 
@@ -200,7 +211,16 @@ if __name__ == "__main__":
     gen_schmucks(1000)
     gen_schmackages_stuff(1000)
     cursor.execute("SELECT count(*) FROM schmucks")
-    cursor.execute("SELECT count(*) FROM schmackages")
-    cursor.execute("SELECT count(*) FROM schmackage_logs")
-    conn.commit()
     print(cursor.fetchall())
+    cursor.execute("SELECT count(*) FROM schmackages")
+    print(cursor.fetchall())
+    cursor.execute("SELECT count(*) FROM schmackage_logs")
+    print(cursor.fetchall())
+    conn.commit()
+
+print(truck_crash_report(7))
+print(most_frequent_customer())
+print(most_spent_customer())
+print(bill_customers())
+print(bill_customers('itemized_bill'))
+print(bill_customers('type'))
